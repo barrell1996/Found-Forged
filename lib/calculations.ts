@@ -56,6 +56,22 @@ export function scoreDeal(purchasePrice: number, low: number, high: number) {
   return { maxBuy, score, recommendation };
 }
 
+export function compRange(comps: number[]) {
+  const valid = comps.filter((value) => Number.isFinite(value) && value > 0).sort((a, b) => a - b);
+  if (!valid.length) return null;
+
+  const average = valid.reduce((sum, value) => sum + value, 0) / valid.length;
+  const low = valid.length >= 3 ? valid[1] : valid[0];
+  const high = valid.length >= 3 ? valid[valid.length - 2] : valid[valid.length - 1];
+
+  return {
+    count: valid.length,
+    average: Number(average.toFixed(2)),
+    low: Number(low.toFixed(2)),
+    high: Number(high.toFixed(2)),
+  };
+}
+
 export function generateSku(itemName: string, brand: string) {
   const base = `${brand || "FF"} ${itemName || "ITEM"}`
     .toUpperCase()
