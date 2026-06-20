@@ -19,9 +19,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
-      <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+14px)] backdrop-blur">
-        <p className="text-xs font-semibold uppercase tracking-wide text-clay">Found & Forged</p>
-        <h1 className="text-xl font-bold text-ink">Resale Console</h1>
+      <header className="sticky top-0 z-20 border-b border-ink/10 bg-paper/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+12px)] backdrop-blur">
+        <div className="flex items-center gap-3">
+          <img
+            src="/found-forged-logo.png"
+            alt="Found & Forged Trading Co."
+            className="h-12 w-12 shrink-0 rounded-full border border-ink/15 bg-white object-cover shadow-sm"
+          />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-clay">Found & Forged</p>
+            <h1 className="truncate text-xl font-bold text-ink">Resale Console</h1>
+          </div>
+        </div>
       </header>
       <main className="flex-1 px-4 py-4 pb-28">{children}</main>
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-ink/10 bg-white/95 pb-[calc(env(safe-area-inset-bottom)+8px)] pt-2 shadow-[0_-10px_30px_rgba(31,37,35,0.08)] backdrop-blur">

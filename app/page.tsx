@@ -17,6 +17,19 @@ export default function Dashboard() {
 
   return (
     <div>
+      <section className="panel mb-4 flex items-center gap-4 overflow-hidden">
+        <img
+          src="/found-forged-logo.png"
+          alt="Found & Forged Trading Co."
+          className="h-24 w-24 shrink-0 rounded-full border border-ink/10 bg-white object-cover"
+        />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-clay">Vintage finds · custom goods</p>
+          <h2 className="text-xl font-black leading-tight text-ink">Found & Forged Trading Co.</h2>
+          <p className="mt-1 text-sm leading-5 text-ink/60">Est. 2026</p>
+        </div>
+      </section>
+
       <PageHeading title="Today’s resale bench" eyebrow="Dashboard">
         Track sourcing, listing, storage, and profit from one shared console.
       </PageHeading>
