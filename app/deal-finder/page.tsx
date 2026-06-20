@@ -2,36 +2,79 @@
 
 import { useState } from "react";
 import { ExternalLink, Plus, Sparkles, Wand2 } from "lucide-react";
-import { compRange, money, scoreDeal } from "@/lib/calculations";
+import { compRange, money, scoreSmartDeal } from "@/lib/calculations";
 import { useInventory } from "@/components/inventory-provider";
 import { PageHeading } from "@/components/page-heading";
+
+const conditions = ["New", "Like New", "Good", "Fair", "Poor"];
+const platforms = [
+  { name: "Facebook Marketplace", feeRate: 0 },
+  { name: "eBay", feeRate: 0.14 },
+  { name: "Poshmark", feeRate: 0.2 },
+  { name: "Mercari", feeRate: 0.1 },
+];
+const signals = [
+  { label: "Low", value: "low" },
+  { label: "Medium", value: "medium" },
+  { label: "High", value: "high" },
+] as const;
 
 export default function DealFinderPage() {
   const { addItem } = useInventory();
   const [itemName, setItemName] = useState("");
   const [brand, setBrand] = useState("");
   const [category, setCategory] = useState("Apparel");
+  const [condition, setCondition] = useState("Good");
+  const [platform, setPlatform] = useState(platforms[0].name);
+  const [demand, setDemand] = useState<"low" | "medium" | "high">("medium");
+  const [sellThrough, setSellThrough] = useState<"low" | "medium" | "high">("medium");
+  const [competition, setCompetition] = useState<"low" | "medium" | "high">("medium");
   const [purchase, setPurchase] = useState(25);
   const [low, setLow] = useState(70);
   const [high, setHigh] = useState(110);
+  const [prepCost, setPrepCost] = useState(0);
+  const [shippingCost, setShippingCost] = useState(0);
   const [comps, setComps] = useState([0, 0, 0, 0, 0]);
   const query = [brand, itemName].filter(Boolean).join(" ").trim() || "resale item";
   const range = compRange(comps);
-  const result = scoreDeal(purchase, low, high);
+  const selectedPlatform = platforms.find((option) => option.name === platform) || platforms[0];
+  const result = scoreSmartDeal({
+    purchasePrice: purchase,
+    low,
+    high,
+    condition,
+    platform,
+    demand,
+    sellThrough,
+    competition,
+    prepCost,
+    shippingCost,
+    feeRate: selectedPlatform.feeRate,
+    compCount: range?.count || 0,
+  });
 
   async function addDraft() {
     await addItem({
       item_name: itemName || "Untitled deal",
       brand,
       category,
+      condition,
       purchase_price: purchase,
       target_sale_price: high,
+      platform,
       estimated_resale_low: low,
       estimated_resale_high: high,
       max_buy_price: result.maxBuy,
       deal_score: result.score,
       deal_recommendation: result.recommendation,
-      notes: `Deal Finder result: ${result.recommendation}`,
+      shipping_cost: shippingCost,
+      fees: result.fees,
+      notes: [
+        `Deal Finder result: ${result.recommendation}`,
+        `Confidence: ${result.confidence}`,
+        `Demand: ${demand}, sell-through: ${sellThrough}, competition: ${competition}`,
+        ...result.reasons,
+      ].join("\n"),
     });
     setItemName("");
     setBrand("");
@@ -67,11 +110,35 @@ export default function DealFinderPage() {
             </select>
           </label>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label>
+            <span className="label">Condition</span>
+            <select className="field mt-1" value={condition} onChange={(e) => setCondition(e.target.value)}>
+              {conditions.map((option) => <option key={option}>{option}</option>)}
+            </select>
+          </label>
+          <label>
+            <span className="label">Platform</span>
+            <select className="field mt-1" value={platform} onChange={(e) => setPlatform(e.target.value)}>
+              {platforms.map((option) => <option key={option.name}>{option.name}</option>)}
+            </select>
+          </label>
+        </div>
         <div className="grid grid-cols-3 gap-2">
           <NumberField label="Ask" value={purchase} onChange={setPurchase} />
           <NumberField label="Low" value={low} onChange={setLow} />
           <NumberField label="High" value={high} onChange={setHigh} />
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <NumberField label="Prep cost" value={prepCost} onChange={setPrepCost} />
+          <NumberField label="Ship cost" value={shippingCost} onChange={setShippingCost} />
+        </div>
+      </section>
+
+      <section className="panel mt-4 space-y-4">
+        <SignalPicker label="Demand" value={demand} onChange={setDemand} />
+        <SignalPicker label="Sell-through" value={sellThrough} onChange={setSellThrough} />
+        <SignalPicker label="Competition" value={competition} onChange={setCompetition} />
       </section>
 
       <section className="panel mt-4 space-y-3">
@@ -130,15 +197,64 @@ export default function DealFinderPage() {
             <p className="text-xl font-black">{money(result.maxBuy)}</p>
           </div>
         </div>
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <Metric label="Profit" value={money(result.expectedProfit)} />
+          <Metric label="ROI" value={`${result.roi}%`} />
+          <Metric label="Confidence" value={result.confidence} />
+        </div>
         <div className="rounded-md bg-brass/20 p-3">
           <p className="flex items-center gap-2 text-sm font-black"><Sparkles size={16} /> {result.recommendation}</p>
-          <p className="mt-1 text-sm text-ink/70">Expected resale range: {money(low)} to {money(high)}.</p>
+          <p className="mt-1 text-sm text-ink/70">Expected resale range: {money(low)} to {money(high)}. Net after estimated fees/shipping: {money(result.netResale)}.</p>
+        </div>
+        <div className="space-y-2">
+          {result.reasons.map((reason) => (
+            <p key={reason} className="rounded-md bg-paper px-3 py-2 text-sm text-ink/70">{reason}</p>
+          ))}
         </div>
         <button className="btn-primary w-full" onClick={addDraft}>
           <Plus size={17} />
           Add as draft item
         </button>
       </section>
+    </div>
+  );
+}
+
+function SignalPicker({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: "low" | "medium" | "high";
+  onChange: (value: "low" | "medium" | "high") => void;
+}) {
+  return (
+    <div>
+      <p className="label">{label}</p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {signals.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`h-10 rounded-md border text-sm font-semibold transition ${
+              value === option.value ? "border-moss bg-moss text-white" : "border-ink/15 bg-white text-ink"
+            }`}
+            onClick={() => onChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-paper px-2 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-ink/50">{label}</p>
+      <p className="mt-1 text-sm font-black text-ink">{value}</p>
     </div>
   );
 }
